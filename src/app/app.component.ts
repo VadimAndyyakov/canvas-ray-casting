@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import {SceneSize} from './components/scene-options/size';
+import {SceneOptions} from './components/scene-options/options';
 
 @Component({
   selector: 'app-root',
@@ -6,5 +8,5 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-  title = 'canvas-ray-casting';
+  public sceneOptions = new SceneOptions(new SceneSize(600, 600));
 }
