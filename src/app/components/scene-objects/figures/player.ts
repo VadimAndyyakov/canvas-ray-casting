@@ -1,11 +1,8 @@
 import {CanvasObject} from '../canvas-object';
+import {VectorHandler} from '../../../services/vector-handler';
+import {Ray} from './ray';
+import {Vector} from './vector';
 import {Circle} from './circle';
-import {Line} from './line';
-
-export class Vector {
-  constructor(public x: number, public y: number) {
-  }
-}
 
 export enum MoveDirection {
   Forward,
@@ -14,12 +11,17 @@ export enum MoveDirection {
 
 export class Player implements CanvasObject {
 
+  /** направление игрока, по умолчанию вправо */
+  private direction: Vector = new Vector(1, 0);
+
+  private rayLength = 150;
+
   constructor(
     private ctx: CanvasRenderingContext2D | null,
     private radius: number,
     private position: Vector,
-    private direction: Vector,
-    private speed: number
+    private speed: number,
+    private vectorHandler: VectorHandler
   ) {
   }
 
@@ -30,8 +32,8 @@ export class Player implements CanvasObject {
     if (this.ctx === null) {
       throw new Error('Не найден контекст для canvas');
     }
+    new Ray(this.ctx, this.position, this.direction, this.rayLength).draw();
     new Circle(this.ctx, this.position, this.radius).draw();
-    this.drawViewingAngle();
   }
 
   /**
@@ -39,7 +41,7 @@ export class Player implements CanvasObject {
    * @param deg угол поворота
    */
   public turnLeft(deg: number): void {
-    this.direction = this.rotate(this.position, this.direction, -deg);
+    this.direction = this.rotate(-deg);
   }
 
   /**
@@ -47,131 +49,53 @@ export class Player implements CanvasObject {
    * @param deg угол поворота
    */
   public turnRight(deg: number): void {
-    this.direction = this.rotate(this.position, this.direction, deg);
+    this.direction = this.rotate(deg);
   }
 
   /**
    * движение игрока вперед или назад относительно направления взгляда
-   * @param direction направление движения, 0 - вперед, 1 - назад
+   * @param moveDirection направление движения, 0 - вперед, 1 - назад
    */
-  public move(direction: MoveDirection): void {
-    const directionVector = this.getDirectionVector(this.position, this.direction);
-    const lengthVector = this.getLengthVector(directionVector);
-    const normalizeVector = this.getNormalizedVector(directionVector, lengthVector);
+  public move(moveDirection: MoveDirection): void {
 
-    if (direction === MoveDirection.Forward && this.speed < 0) {
+    const position = this.position;
+    const direction = this.direction;
+    const rayLength = this.rayLength;
+
+    const lookAtPoint = new Vector(
+      position.x + direction.x * rayLength,
+      position.y + direction.y * rayLength
+    );
+
+    const directionVector = this.vectorHandler.getDirectionVector(position, lookAtPoint);
+    const normalizeVector = this.vectorHandler.getNormalizedVector(directionVector, rayLength);
+
+    if (moveDirection === MoveDirection.Forward && this.speed < 0) {
       this.speed = this.speed * -1;
     }
-    if (direction === MoveDirection.Backward && this.speed > 0) {
+    if (moveDirection === MoveDirection.Backward && this.speed > 0) {
       this.speed = this.speed * -1;
     }
 
     this.position.x += normalizeVector.x * this.speed;
-    this.direction.x += normalizeVector.x * this.speed;
     this.position.y += normalizeVector.y * this.speed;
-    this.direction.y += normalizeVector.y * this.speed;
 
-    this.drawRangeOfVisibility();
   }
 
   /**
-   * изобраить линию "взгляда" игрока
-   */
-  private drawRangeOfVisibility(): void {
-    const playerPosition = new Vector(this.position.x, this.position.y);
-    const playerDirection = new Vector(this.direction.x, this.direction.y);
-
-    const directionVector = this.getDirectionVector(playerPosition, playerDirection);
-    const lengthDirectionVector = this.getLengthVector(directionVector);
-    const normalizedDirectionVector = this.getNormalizedVector(directionVector, lengthDirectionVector);
-
-    const pointOfView = new Vector(
-      playerPosition.x + lengthDirectionVector * normalizedDirectionVector.x,
-      playerPosition.y + lengthDirectionVector * normalizedDirectionVector.y
-    );
-
-    new Line(this.ctx, playerPosition, pointOfView).draw();
-  }
-
-  /**
-   * изобраить векторами угол обзора игрока
-   */
-  private drawViewingAngle(): void {
-    const playerPosition = new Vector(this.position.x, this.position.y);
-    const playerDirection = new Vector(this.direction.x, this.direction.y);
-
-    const directionVector = this.getDirectionVector(playerPosition, playerDirection);
-    const lengthDirectionVector = this.getLengthVector(directionVector);
-    const normalizedDirectionVector = this.getNormalizedVector(directionVector, lengthDirectionVector);
-
-    let pointOfView = new Vector(
-      playerPosition.x + lengthDirectionVector * normalizedDirectionVector.x,
-      playerPosition.y + lengthDirectionVector * normalizedDirectionVector.y
-    );
-
-    pointOfView = this.rotate(playerPosition, pointOfView, 45 / 2);
-
-    let i = 45;
-    while (i > 0) {
-      pointOfView = this.rotate(playerPosition, pointOfView, -1);
-      new Line(this.ctx, playerPosition, pointOfView).draw();
-      i--;
-    }
-  }
-
-  /** FIXME: Вынести методы для работы с векторами в сервис */
-
-  /**
-   * поворот вектора ab на переданный в аргументе угол относительно точки a
-   * @param a координаты начала вектора
-   * @param b координаты конца вектора
+   * возвращает вектор повернутый на градус переданный в аргументе
    * @param deg угол в градусах
    */
-  private rotate(a: Vector, b: Vector, deg: number): Vector {
-    const cos = Math.cos(this.degToRadian(deg));
-    const sin = Math.sin(this.degToRadian(deg));
+  private rotate(deg: number): Vector {
+    const cos = Math.cos(this.vectorHandler.degToRadian(deg));
+    const sin = Math.sin(this.vectorHandler.degToRadian(deg));
 
-    const dirX = b.x;
-    const dirY = b.y;
-
-    const posX = a.x;
-    const posY = a.y;
+    const posX = this.direction.x;
+    const posY = this.direction.y;
 
     return new Vector(
-      posX + (dirX - posX) * cos - (dirY - posY) * sin,
-      posY + (dirX - posX) * sin + (dirY - posY) * cos
+      posX * cos - posY * sin,
+      posX * sin + posY * cos
     );
-  }
-
-  /**
-   * получить нормаль вектора
-   * @param vector вектор
-   * @param length длинна вектора
-   */
-  private getNormalizedVector(vector: Vector, length: number): Vector {
-    return new Vector(vector.x / length, vector.y / length);
-  }
-
-  /**
-   * получить длинну вектора переданного в аргументе
-   * @param vector вектор длинна которого ищется
-   */
-  private getLengthVector(vector: Vector): number {
-    return Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2));
-  }
-
-  /**
-   * получить вектор направления игрока
-   */
-  private getDirectionVector(start: Vector, end: Vector): Vector {
-    return new Vector(end.x - start.x, end.y - start.y);
-  }
-
-  /**
-   * перевести градусы в радианы
-   * @param deg угол который необходимо первести
-   */
-  private degToRadian(deg: number): number {
-    return deg * Math.PI / 180;
   }
 }

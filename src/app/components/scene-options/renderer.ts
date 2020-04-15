@@ -12,7 +12,12 @@ export class SceneRenderer {
   }
 
   public renderMap(width: number, height: number, color: string): void {
+    this.clearMap(width, height);
     this.ctx.fillStyle = color;
     this.ctx.fillRect(0, 0, width, height);
+  }
+
+  private clearMap(width: number, height: number): void {
+    this.ctx.clearRect(0, 0, width, height);
   }
 }

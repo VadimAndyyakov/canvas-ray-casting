@@ -4,6 +4,7 @@ import { NgModule } from '@angular/core';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import {SceneComponent} from './components/scene/scene.component';
+import {VectorHandler} from './services/vector-handler';
 
 @NgModule({
   declarations: [
@@ -14,7 +15,7 @@ import {SceneComponent} from './components/scene/scene.component';
     BrowserModule,
     AppRoutingModule
   ],
-  providers: [],
+  providers: [VectorHandler],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

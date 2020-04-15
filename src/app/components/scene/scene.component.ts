@@ -1,7 +1,9 @@
 import {AfterViewInit, Component, ElementRef, HostListener, Input, ViewChild} from '@angular/core';
-import {MoveDirection, Player, Vector} from '../scene-objects/figures/player';
+import {MoveDirection, Player} from '../scene-objects/figures/player';
 import {SceneOptions} from '../scene-options/options';
 import {SceneRenderer} from '../scene-options/renderer';
+import {VectorHandler} from '../../services/vector-handler';
+import {Vector} from '../scene-objects/figures/vector';
 
 
 @Component({
@@ -28,9 +30,6 @@ export class SceneComponent implements AfterViewInit {
   // вектор первоначаланой позиции игрока
   private playerPosition: Vector = new Vector(300, 300);
 
-  // вектор первоначального направления игрока
-  private playerDirection: Vector = new Vector(this.playerPosition.x + 150, this.playerPosition.y);
-
   // вектор первоначальной скорости игрока
   private playerSpeed = 10;
 
@@ -44,17 +43,24 @@ export class SceneComponent implements AfterViewInit {
   @HostListener('document:keydown', ['$event'])
   public handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'w') {
+      console.log('w');
       this.player.move(this.playerMoveDirections.Forward);
     }
     if (event.key === 'a') {
-      this.player.turnLeft(5);
+      console.log('a');
+      this.player.turnLeft(10);
     }
     if (event.key === 's') {
+      console.log('s');
       this.player.move(this.playerMoveDirections.Backward);
     }
     if (event.key === 'd') {
-      this.player.turnRight(5);
+      console.log('d');
+      this.player.turnRight(10);
     }
+  }
+
+  constructor(private vectorHandler: VectorHandler) {
   }
 
   public ngAfterViewInit(): void {
@@ -64,7 +70,7 @@ export class SceneComponent implements AfterViewInit {
     this.playerPosition.x = this.sceneOptions.sceneSize.width / 2;
     this.playerPosition.y = this.sceneOptions.sceneSize.height / 2;
     this.scene = new SceneRenderer(this.ctx);
-    this.player = new Player(this.ctx, 10, this.playerPosition, this.playerDirection, this.playerSpeed);
+    this.player = new Player(this.ctx, 10, this.playerPosition, this.playerSpeed, this.vectorHandler);
     this.renderScene();
   }
 

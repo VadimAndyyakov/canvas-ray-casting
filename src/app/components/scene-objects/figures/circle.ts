@@ -1,5 +1,5 @@
 import {CanvasObject} from '../canvas-object';
-import {Vector} from './player';
+import {Vector} from './vector';
 
 export class Circle implements CanvasObject {
   constructor(
